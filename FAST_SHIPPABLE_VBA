@@ -1,0 +1,92 @@
+Private Sub Workbook_Open()
+    ' Check if 'Updated' is present in cell G1 of the 'Shippable Parts Summary' sheet
+    If Worksheets("Shippable Parts Summary").Range("G1").Value <> "Updated" Then
+        ' Call the MainProgram sub-macro
+        MainProgram
+    End If
+End Sub
+
+Sub MainProgram()
+    ' Step 1: Call the UpdateAndCalculateWorkbook subroutine to run file and duplicate it
+    UpdateAndCalculateWorkbook
+    
+    ' Step 2: Call the savetovalues subroutine
+    savetovalues
+
+    ' Step 3: Call the StampforCopy subroutine
+    StampforCopy
+
+    ' Step 4: Call the closefile subroutine
+    closefile
+End Sub
+
+Sub UpdateAndCalculateWorkbook()
+    Dim SourceFilePath As String
+    Dim DestinationFilePath As String
+    Dim NewFileName As String
+    Dim ws As Worksheet
+    Dim OrderReport As Workbook
+    
+    ' Set the source file path (path to ORDER REPORT FY2016)
+    SourceFilePath = "G:\Sales\Monthly$\ORDER REPORT FY2016.xlsx"
+    
+    ' Try to open the file in read-only mode
+    On Error Resume Next
+    Set OrderReport = Workbooks.Open(SourceFilePath, ReadOnly:=True)
+    On Error GoTo 0
+    
+    ' Check if the file was successfully opened
+    If Not OrderReport Is Nothing Then
+        ' Calculate sheets in Fast Shippable.xlsm
+        For Each ws In ThisWorkbook.Sheets
+            ws.Calculate ' Update/calculate stuffs
+        Next ws
+        
+        ' Disable automatic calculation
+        Application.Calculation = xlCalculationManual
+        
+        ' Save as a new file with the latest date
+        NewFileName = "Fast Shippable_" & Format(Date, "yyyy-mm-dd") & ".xlsm"
+        DestinationFilePath = "G:\Purchasing\David-Analysis\00_FAST POFS\" & NewFileName
+        ThisWorkbook.SaveAs DestinationFilePath, FileFormat:=52 ' 52 represents xlOpenXMLWorkbookMacroEnabled file format
+
+        ' Close the read-only ORDER REPORT FY2016
+        OrderReport.Close SaveChanges:=False
+    Else
+        MsgBox "Unable to open the ORDER REPORT FY2016 file. Please ensure the file path is correct and try again.", vbExclamation
+    End If
+End Sub
+
+Sub savetovalues()
+    'Updateby Extendoffice
+    Dim wsh As Worksheet
+    For Each wsh In ThisWorkbook.Worksheets
+        wsh.Cells.Copy
+        wsh.Cells.PasteSpecial xlPasteValues
+    Next
+    Application.CutCopyMode = False
+End Sub
+
+Sub StampforCopy()
+    Dim ws As Worksheet
+    Dim summarySheet As Worksheet
+    
+    ' Set the summarySheet variable to refer to the "Shippable Parts Summary" sheet
+    On Error Resume Next
+    Set summarySheet = ThisWorkbook.Sheets("Shippable Parts Summary")
+    On Error GoTo 0
+    
+    ' Check if the "Shippable Parts Summary" sheet exists
+    If Not summarySheet Is Nothing Then
+        ' Write "Update" to cell G1 in the "Shippable Parts Summary" sheet
+        summarySheet.Range("G1").Value = "Updated"
+    Else
+        MsgBox "The 'Shippable Parts Summary' sheet does not exist in this workbook.", vbExclamation
+    End If
+End Sub
+
+
+Sub closefile()
+    ' close Fast Component.xlsm
+    ActiveWorkbook.Close SaveChanges:=True
+End Sub
